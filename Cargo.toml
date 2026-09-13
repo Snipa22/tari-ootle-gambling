@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = ["randomness_beacon", "coin_flip"]
+
+# Cargo only honours `[profile.*]` sections from the workspace root manifest -- settings in a
+# member crate's own `Cargo.toml` are silently ignored. Both template crates need to build as
+# small, `panic = "abort"` WASM binaries, so these apply workspace-wide.
+[profile.release]
+opt-level = 's'     # Optimize for size.
+lto = true          # Enable Link Time Optimization.
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = 'abort'     # Abort on panic.
+strip = true        # Strip
+
+# Wasmer and Cranelift are extremely slow when compiled in debug mode (~10x slower), which makes
+# template tests painfully slow. Optimize these specific crates even in dev/test builds. Identical
+# workaround to both sibling repos.
+[profile.dev.package.wasmer]
+opt-level = 2
+[profile.dev.package.wasmer-compiler]
+opt-level = 2
+[profile.dev.package.wasmer-compiler-cranelift]
+opt-level = 2
+[profile.dev.package.cranelift-codegen]
+opt-level = 2
+[profile.dev.package.cranelift-frontend]
+opt-level = 2
+[profile.dev.package.cranelift-entity]
+opt-level = 2

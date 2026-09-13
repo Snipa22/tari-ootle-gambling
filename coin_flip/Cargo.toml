@@ -1,0 +1,41 @@
+[package]
+name = "coin_flip"
+version = "0.1.0"
+edition = "2021"
+description = "Tari Ootle simplest-possible gambling game, consuming a RandomnessBeacon round (v1 research spike)"
+license = "BSD-3-Clause"
+
+[package.metadata.tari-template]
+tags = ["gambling", "coinflip", "spike"]
+category = "gambling"
+
+[dependencies]
+tari_template_lib = { version = "0.31.1" }
+
+[dev-dependencies]
+tari_template_test_tooling = "0.40.0"
+# Used only in tests, to drive the sibling `randomness_beacon` template's commit/reveal phases to
+# finalization before exercising `resolve_bet` -- same role as in `randomness_beacon`'s own
+# dev-dependencies.
+tari_ootle_common_types = "0.40.0"
+rand = { version = "0.10", features = ["thread_rng"] }
+# Used only in tests, to compute the Blake2s-256 commitment hashes the beacon's `commit` expects
+# -- must match `randomness_beacon`'s own hash function exactly.
+blake2 = { version = "0.10", default-features = false }
+
+# tari_engine 0.40.0 (pulled in transitively by tari_template_test_tooling) calls
+# `wasmer_compiler::BaseTunables::for_target`, which exists in wasmer-compiler 7.1.x-7.3.x but was
+# removed by wasmer-compiler 7.4.0. Cargo's default resolver picks the newest semver-compatible
+# version (^7.1.0 allows 7.4.0), which breaks the build with an upstream API-compat bug that is
+# not ours to fix in a v1 spike. Pin the whole wasmer 7.x family down to the last version known to
+# still have `BaseTunables::for_target`. Identical pin to both sibling repos.
+wasmer = "=7.1.0"
+wasmer-compiler = "=7.1.0"
+wasmer-compiler-cranelift = "=7.1.0"
+wasmer-middlewares = "=7.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+# NOTE: `[profile.*]` sections live in the workspace root `Cargo.toml`, not here -- see the note
+# in `randomness_beacon/Cargo.toml` for why.
