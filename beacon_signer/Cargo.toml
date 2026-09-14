@@ -1,0 +1,65 @@
+[package]
+name = "beacon_signer"
+version = "0.1.0"
+edition = "2021"
+description = "Off-chain Schnorr signer CLI for the tari-ootle-gambling RandomnessBeacon template's commit/reveal calls"
+license = "BSD-3-Clause"
+
+# NOTE: unlike `randomness_beacon`/`coin_flip`, this is a plain, native, off-chain CLI binary --
+# not a WASM template -- so it has no `[package.metadata.tari-template]` section, no
+# `crate-type = ["cdylib"]`, and none of the `#[template]`-macro-facing dependencies
+# (`tari_template_lib`, `blake2`) live in the WASM-boundary form those crates need. It talks to
+# `RandomnessBeacon`'s ABI purely via the same primitive `RistrettoPublicKeyBytes`/
+# `SchnorrSignatureBytes` hex encodings an operator would paste into a `call_ootle_write_function`
+# JSON-RPC call.
+[dependencies]
+# Real Ristretto keys/Schnorr signatures -- same crate `tari_ootle_common_types`'s
+# `RistrettoSchnorrBlake2bVerifier` and `ootle_byte_type`'s `ToByteType` impls are built on top
+# of, and the same crate the sibling template crates' own test suites use to construct real
+# signatures.
+tari_crypto = "0.23"
+# `RistrettoPublicKeyBytes`/`SchnorrSignatureBytes` -- the exact ABI-facing byte types
+# `RandomnessBeacon::commit`/`reveal` take, without pulling in the full WASM-oriented
+# `tari_template_lib` (whose `prelude::*` also shadows the `rand` crate name -- easiest avoided
+# entirely by depending on the lighter `tari_template_lib_types` directly here).
+tari_template_lib_types = "0.31"
+# `RistrettoSchnorrBlake2bVerifier::compute_challenge` -- the real Blake2b Fiat-Shamir challenge
+# primitive `RandomnessBeacon::commit`/`reveal` verify signatures against on-chain. Reused
+# byte-for-byte, not re-derived.
+tari_ootle_common_types = "0.40.0"
+# `ToByteType`/`ConvertFromByteType` -- converts between `tari_crypto`'s "expanded" key/signature
+# types and the "compressed" `*Bytes` ABI types above.
+ootle_byte_type = { version = "0.12", features = ["crypto"] }
+# Real randomness for `generate-key` and for the per-signature nonce. `::rand` (leading `::`)
+# is required wherever `tari_template_lib::prelude::*` might otherwise be in scope -- not the
+# case in this native-only crate, but kept for consistency with the test file this reuses logic
+# from.
+rand = { version = "0.10", features = ["thread_rng"] }
+# The commitment scheme's hash function for `hash-secret` -- must exactly match
+# `RandomnessBeacon::hash_secret` in `randomness_beacon/src/lib.rs`.
+blake2 = { version = "0.10", default-features = false }
+# Hex encode/decode for every CLI arg and printed value -- this tool's entire I/O surface.
+hex = "0.4"
+clap = { version = "4", features = ["derive"] }
+
+[dev-dependencies]
+# Used only in the acceptance test, to actually build+run the `RandomnessBeacon` WASM template
+# (from the sibling `../randomness_beacon` crate) and confirm it accepts a signature this CLI's
+# own compiled binary produces -- the load-bearing correctness check for this whole utility.
+tari_template_test_tooling = "0.40.0"
+
+# tari_engine 0.40.0 (pulled in transitively by tari_template_test_tooling) calls
+# `wasmer_compiler::BaseTunables::for_target`, which exists in wasmer-compiler 7.1.x-7.3.x but was
+# removed by wasmer-compiler 7.4.0. Cargo's default resolver picks the newest semver-compatible
+# version (^7.1.0 allows 7.4.0), which breaks the build with an upstream API-compat bug that is
+# not ours to fix in a v1 spike. Pin the whole wasmer 7.x family down to the last version known to
+# still have `BaseTunables::for_target`. Identical pin to every other crate in this workspace.
+wasmer = "=7.1.0"
+wasmer-compiler = "=7.1.0"
+wasmer-compiler-cranelift = "=7.1.0"
+wasmer-middlewares = "=7.1.0"
+
+# NOTE: `[profile.*]` sections live in the workspace root `Cargo.toml`, not here -- see the note
+# in `randomness_beacon/Cargo.toml` for why. This crate is a native binary (not WASM), but Cargo
+# only reads `[profile.*]` from the workspace root manifest regardless, so there is nothing
+# crate-specific to add here anyway.

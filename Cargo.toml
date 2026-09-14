@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["randomness_beacon", "coin_flip"]
+members = ["randomness_beacon", "coin_flip", "beacon_signer"]
 
 # Cargo only honours `[profile.*]` sections from the workspace root manifest -- settings in a
 # member crate's own `Cargo.toml` are silently ignored. Both template crates need to build as
